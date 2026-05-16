@@ -48,13 +48,6 @@ impl AppPaths {
         }
     }
 
-    pub fn ensure_dirs_exist(&self) -> std::io::Result<()> {
-        std::fs::create_dir_all(&self.config_dir)?;
-        std::fs::create_dir_all(&self.data_dir)?;
-        std::fs::create_dir_all(&self.log_dir)?;
-        Ok(())
-    }
-
     fn is_dev_mode() -> bool {
         match env::var("NIRVANA_DEV").as_deref() {
             Ok("0") => false,

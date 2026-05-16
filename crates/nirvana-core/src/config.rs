@@ -39,8 +39,8 @@ impl AppConfig {
     }
 
     pub fn save(&self, paths: &AppPaths) -> Result<(), ConfigError> {
-        paths.ensure_dirs_exist()?;
         let content = toml::to_string_pretty(self)?;
+        std::fs::create_dir_all(&paths.config_dir)?;
         fs::write(&paths.config_file, content)?;
         Ok(())
     }
