@@ -12,7 +12,6 @@ const COMMIT_DATE: Option<&str> = option_env!("COMMIT_DATE");
 pub fn run() -> anyhow::Result<()> {
     let paths = AppPaths::resolve();
     let term = Term::stdout();
-
     let bold = Style::new().bold();
 
     let version_str = match (paths.is_dev, SHORT_HASH, COMMIT_DATE) {
@@ -21,32 +20,27 @@ pub fn run() -> anyhow::Result<()> {
         (true, _, _) => format!("{VERSION}-dev"),
         (false, _, _) => VERSION.to_string(),
     };
-
+    let binary_str = env::current_exe()
+        .map(|p: PathBuf| p.display().to_string())
+        .unwrap_or_else(|_| "<unknown>".into());
     let os_str = format!("{} ({})", env::consts::OS, env::consts::ARCH);
+
+    let print_row = |label: &str, value: &str| -> std::io::Result<()> {
+        term.write_line(&format!("{:16}{}", bold.apply_to(label), value))
+    };
 
     term.write_line(&format!("Nirvana {}", bold.apply_to(&version_str)))?;
     term.write_line("")?;
-    print_row(&term, "Version", &version_str)?;
-    print_row(&term, "OS", &os_str)?;
-    print_row(&term, "Binary", &exe_display())?;
+    print_row("Version", &version_str)?;
+    print_row("OS", &os_str)?;
+    print_row("Binary", &binary_str)?;
     if let (Some(hash), Some(date)) = (COMMIT_HASH, COMMIT_DATE) {
-        print_row(&term, "Commit hash", hash)?;
-        print_row(&term, "Commit date", date)?;
+        print_row("Commit hash", hash)?;
+        print_row("Commit date", date)?;
     }
-    print_row(&term, "Config", &paths.config_file.display().to_string())?;
-    print_row(&term, "Database", &paths.db_file.display().to_string())?;
-    print_row(&term, "Log file", &paths.log_file.display().to_string())?;
+    print_row("Config", &paths.config_file.display().to_string())?;
+    print_row("Database", &paths.db_file.display().to_string())?;
+    print_row("Log file", &paths.log_file.display().to_string())?;
 
     Ok(())
-}
-
-fn print_row(term: &Term, label: &str, value: &str) -> std::io::Result<()> {
-    let bold = Style::new().bold();
-    term.write_line(&format!("{:16}{}", bold.apply_to(label), value))
-}
-
-fn exe_display() -> String {
-    env::current_exe()
-        .map(|p: PathBuf| p.display().to_string())
-        .unwrap_or_else(|_| "<unknown>".into())
 }
