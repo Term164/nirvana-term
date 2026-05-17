@@ -1,24 +1,17 @@
+pub(crate) mod connection_repo;
+
 use std::{fs, path::Path};
 
-use rusqlite::Connection;
-use thiserror::Error;
+use rusqlite::Connection as SqliteConnection;
 
-pub mod connection_repo;
+use crate::api::errors::DbError;
 
-pub struct Database {
-    connection: Connection,
-}
-
-#[derive(Debug, Error)]
-pub enum DbError {
-    #[error("sqlite error: {0}")]
-    Sqlite(#[from] rusqlite::Error),
-    #[error("db I/O error: {0}")]
-    Io(#[from] std::io::Error),
+pub(crate) struct Database {
+    connection: SqliteConnection,
 }
 
 impl Database {
-    pub(crate) fn conn(&self) -> &Connection {
+    pub(crate) fn conn(&self) -> &SqliteConnection {
         &self.connection
     }
 
@@ -33,7 +26,7 @@ impl Database {
             fs::create_dir_all(parent)?;
         }
 
-        let conn = Connection::open(path)?;
+        let conn = SqliteConnection::open(path)?;
         conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;")?;
 
         Ok(Self { connection: conn })

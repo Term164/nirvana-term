@@ -1,8 +1,6 @@
 use chrono::{Local, TimeZone};
 use console::{Style, Term};
-use nirvana_core::db::connection_repo;
-use nirvana_core::domain::Connection;
-use nirvana_core::{ActiveConnection, AppConfig, AppPaths, Database};
+use nirvana_core::api::{ActiveConnection, Connection, NirvanaApi};
 use std::cmp::max;
 
 enum Column {
@@ -34,7 +32,6 @@ impl Column {
         }
     }
 
-    /// Truncate cell contents with ellipsis if needed.
     fn render(&self, cell: &str) -> String {
         match self {
             Column::Limited(_, cap) if cell.len() > *cap => {
@@ -51,18 +48,16 @@ impl Column {
 const COLUMNS: &[Column] = &[
     Column::Unlimited("ID"),
     Column::Static("ACTIVE", "ACTIVE".len()),
-    Column::Limited("NAME", 12),
+    Column::Limited("NAME", 15),
     Column::Unlimited("KIND"),
-    Column::Limited("HOST", 28),
-    Column::Limited("IDENTITY", 28),
+    Column::Limited("HOST", 25),
+    Column::Limited("IDENTITY", 25),
     Column::Static("UPDATED", "2026-05-17".len()),
 ];
 
-pub fn list() -> anyhow::Result<()> {
-    let paths = AppPaths::resolve();
-    let db = Database::initialize(&paths.db_file)?;
-    let config = AppConfig::load(&paths.config_file)?;
-    let connections = connection_repo::list(&db)?;
+pub(crate) fn list() -> anyhow::Result<()> {
+    let api = NirvanaApi::new()?;
+    let connections = api.list_connections()?;
 
     let term = Term::stdout();
     if connections.is_empty() {
@@ -80,7 +75,7 @@ pub fn list() -> anyhow::Result<()> {
                 .unwrap()
                 .date_naive()
                 .to_string();
-            let active = if is_active(c, &config) { "*" } else { "" };
+            let active = if is_active(c, &api) { "*" } else { "" };
             [
                 c.id.to_string(),
                 active.to_string(),
@@ -100,12 +95,10 @@ pub fn list() -> anyhow::Result<()> {
         }
     }
 
-    // Header
     let bold = Style::new().bold();
     let header: Vec<&str> = COLUMNS.iter().map(|c| c.header()).collect();
     print_row(&term, &header, &widths, Some(&bold))?;
 
-    // Data rows
     for row in &rows {
         let cells: Vec<String> = row
             .iter()
@@ -119,8 +112,8 @@ pub fn list() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn is_active(conn: &Connection, config: &AppConfig) -> bool {
-    match &config.active_connection {
+fn is_active(conn: &Connection, api: &NirvanaApi) -> bool {
+    match api.active_connection() {
         Some(ActiveConnection::Id(id)) => conn.id == *id,
         Some(ActiveConnection::Name(name)) => conn.name == *name,
         None => false,

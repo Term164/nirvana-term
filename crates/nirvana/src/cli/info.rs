@@ -1,27 +1,21 @@
 use console::{Style, Term};
 use std::env;
-use std::path::PathBuf;
 
-use nirvana_core::AppPaths;
+use nirvana_core::api::NirvanaApi;
 
-const VERSION: &str = env!("CARGO_PKG_VERSION");
 const SHORT_HASH: Option<&str> = option_env!("SHORT_HASH");
 const COMMIT_HASH: Option<&str> = option_env!("COMMIT_HASH");
 const COMMIT_DATE: Option<&str> = option_env!("COMMIT_DATE");
 
-pub fn run() -> anyhow::Result<()> {
-    let paths = AppPaths::resolve();
+pub(crate) fn run() -> anyhow::Result<()> {
+    let api = NirvanaApi::new()?;
+    let info = api.info();
     let term = Term::stdout();
     let bold = Style::new().bold();
 
-    let version_str = match (paths.is_dev, SHORT_HASH, COMMIT_DATE) {
-        (true, Some(hash), Some(date)) => format!("{VERSION}-dev ({hash} {date})"),
-        (false, Some(hash), Some(date)) => format!("{VERSION} ({hash} {date})"),
-        (true, _, _) => format!("{VERSION}-dev"),
-        (false, _, _) => VERSION.to_string(),
-    };
+    let version_str = format_version(info.is_dev, info.version.clone());
     let binary_str = env::current_exe()
-        .map(|p: PathBuf| p.display().to_string())
+        .map(|p| p.display().to_string())
         .unwrap_or_else(|_| "<unknown>".into());
     let os_str = format!("{} ({})", env::consts::OS, env::consts::ARCH);
 
@@ -38,9 +32,18 @@ pub fn run() -> anyhow::Result<()> {
         print_row("Commit hash", hash)?;
         print_row("Commit date", date)?;
     }
-    print_row("Config", &paths.config_file.display().to_string())?;
-    print_row("Database", &paths.db_file.display().to_string())?;
-    print_row("Log file", &paths.log_file.display().to_string())?;
+    print_row("Config", &info.config_file.display().to_string())?;
+    print_row("Database", &info.db_file.display().to_string())?;
+    print_row("Log file", &info.log_file.display().to_string())?;
 
     Ok(())
+}
+
+fn format_version(is_dev: bool, base: String) -> String {
+    match (is_dev, SHORT_HASH, COMMIT_DATE) {
+        (true, Some(hash), Some(date)) => format!("{base}-dev ({hash} {date})"),
+        (false, Some(hash), Some(date)) => format!("{base} ({hash} {date})"),
+        (true, _, _) => format!("{base}-dev"),
+        (false, _, _) => base,
+    }
 }

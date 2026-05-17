@@ -1,7 +1,7 @@
-use crate::db::{Database, DbError};
-use crate::domain::Connection;
+use crate::api::errors::DbError;
+use crate::storage::Database;
 
-pub fn list(db: &Database) -> Result<Vec<Connection>, DbError> {
+pub(crate) fn list(db: &Database) -> Result<Vec<ConnectionRecord>, DbError> {
     let mut stmt = db.conn().prepare(
         "select id, name, kind, base_url, identity, secret_store,
                 created_at, updated_at
@@ -9,7 +9,7 @@ pub fn list(db: &Database) -> Result<Vec<Connection>, DbError> {
          order by id",
     )?;
     let rows = stmt.query_map([], |row| {
-        Ok(Connection {
+        Ok(ConnectionRecord {
             id: row.get(0)?,
             name: row.get(1)?,
             kind: row.get(2)?,
@@ -21,4 +21,15 @@ pub fn list(db: &Database) -> Result<Vec<Connection>, DbError> {
         })
     })?;
     rows.collect::<Result<_, _>>().map_err(DbError::from)
+}
+
+pub(crate) struct ConnectionRecord {
+    pub id: i64,
+    pub name: String,
+    pub kind: String,
+    pub base_url: String,
+    pub identity: String,
+    pub secret_store: String,
+    pub created_at: i64,
+    pub updated_at: i64,
 }

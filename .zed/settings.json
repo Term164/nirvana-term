@@ -1,7 +1,6 @@
 {
     "languages": {
         "SQL": {
-            "tab_size": 4,
             "formatter": {
                 "external": {
                     "command": "mise",
