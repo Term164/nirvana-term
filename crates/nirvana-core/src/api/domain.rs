@@ -26,11 +26,3 @@ impl From<ConnectionRecord> for Connection {
         }
     }
 }
-
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-pub enum ActiveConnection {
-    #[serde(rename = "id")]
-    Id(i64),
-    #[serde(rename = "name")]
-    Name(String),
-}

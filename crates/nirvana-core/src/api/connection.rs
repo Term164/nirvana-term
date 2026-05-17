@@ -1,6 +1,5 @@
 use crate::api::NirvanaApi;
 use crate::api::NirvanaError;
-use crate::api::domain::ActiveConnection;
 use crate::api::domain::Connection;
 use crate::storage::connection_repo;
 
@@ -10,7 +9,13 @@ impl NirvanaApi {
         Ok(records.into_iter().map(Connection::from).collect())
     }
 
-    pub fn active_connection(&self) -> Option<&ActiveConnection> {
-        self.config.active_connection.as_ref()
+    pub fn active_connection(&self) -> Option<i64> {
+        self.config.active_connection
+    }
+
+    pub fn set_active_connection(&mut self, id: i64) -> Result<(), NirvanaError> {
+        self.config.active_connection = Some(id);
+        self.config.save(&self.paths)?;
+        Ok(())
     }
 }

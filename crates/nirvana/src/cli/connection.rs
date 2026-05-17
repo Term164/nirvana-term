@@ -1,6 +1,7 @@
 use chrono::{Local, TimeZone};
 use console::{Style, Term};
-use nirvana_core::api::{ActiveConnection, Connection, NirvanaApi};
+use dialoguer::{Select, theme::ColorfulTheme};
+use nirvana_core::api::{Connection, NirvanaApi};
 use std::cmp::max;
 
 enum Column {
@@ -113,11 +114,7 @@ pub(crate) fn list() -> anyhow::Result<()> {
 }
 
 fn is_active(conn: &Connection, api: &NirvanaApi) -> bool {
-    match api.active_connection() {
-        Some(ActiveConnection::Id(id)) => conn.id == *id,
-        Some(ActiveConnection::Name(name)) => conn.name == *name,
-        None => false,
-    }
+    api.active_connection() == Some(conn.id)
 }
 
 fn print_row(
@@ -148,4 +145,76 @@ fn print_row(
 
     term.write_line(&parts.join("  "))?;
     Ok(())
+}
+
+pub(crate) fn activate(query: Option<&str>) -> anyhow::Result<()> {
+    let mut api = NirvanaApi::new()?;
+    let connections = api.list_connections()?;
+
+    if connections.is_empty() {
+        let term = Term::stdout();
+        term.write_line("No connections found.")?;
+        term.write_line("Add one with: nirvana connection add")?;
+        return Ok(());
+    }
+
+    let idx = match query {
+        Some(q) => resolve_query(q, &connections)?,
+        None => pick_interactive(&connections)?,
+    };
+    let chosen = &connections[idx];
+
+    api.set_active_connection(chosen.id)?;
+    let term = Term::stdout();
+    term.write_line(&format!(
+        "Active connection set to '{}' (id {})",
+        chosen.name, chosen.id
+    ))?;
+    Ok(())
+}
+
+fn resolve_query(query: &str, connections: &[Connection]) -> anyhow::Result<usize> {
+    if let Ok(id) = query.parse::<i64>() {
+        if let Some(idx) = connections.iter().position(|c| c.id == id) {
+            return Ok(idx);
+        }
+    }
+    if let Some(idx) = connections.iter().position(|c| c.name == query) {
+        return Ok(idx);
+    }
+    anyhow::bail!("Connection '{query}' not found")
+}
+
+fn pick_interactive(connections: &[Connection]) -> anyhow::Result<usize> {
+    let dim = Style::new().dim();
+    let name_width = connections.iter().map(|c| c.name.len()).max().unwrap_or(0);
+
+    let items: Vec<String> = connections
+        .iter()
+        .map(|c| {
+            format!(
+                "{:name_w$}  {} {}",
+                c.name,
+                dim.apply_to(&c.identity),
+                dim.apply_to(format!("({})", c.kind)),
+                name_w = name_width,
+            )
+        })
+        .collect();
+
+    let theme = ColorfulTheme {
+        active_item_prefix: Style::new().green().apply_to(String::from("❯")),
+        ..ColorfulTheme::default()
+    };
+
+    let idx = Select::with_theme(&theme)
+        .with_prompt("Select a connection")
+        .items(&items)
+        .default(0)
+        .interact_opt()?;
+
+    match idx {
+        Some(i) => Ok(i),
+        None => std::process::exit(0),
+    }
 }

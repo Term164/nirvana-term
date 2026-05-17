@@ -11,7 +11,7 @@ use crate::storage::Database;
 
 use errors::{ConfigError, DbError};
 
-pub use domain::{ActiveConnection, Connection};
+pub use domain::Connection;
 
 pub struct NirvanaApi {
     paths: AppPaths,

@@ -29,6 +29,11 @@ enum Command {
 enum Connection {
     /// List all connections
     List,
+    /// Change active connection
+    Use {
+        /// Connection ID or name (omit for interactive selection)
+        query: Option<String>,
+    },
 }
 
 pub(crate) fn run() -> anyhow::Result<()> {
@@ -38,6 +43,7 @@ pub(crate) fn run() -> anyhow::Result<()> {
         Some(Command::Info) => info::run(),
         Some(Command::Connection { command }) => match command {
             Connection::List => connection::list(),
+            Connection::Use { query } => connection::activate(query.as_deref()),
         },
         None => Ok(()),
     }

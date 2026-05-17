@@ -3,7 +3,9 @@ use std::path::PathBuf;
 
 pub struct AppPaths {
     pub config_dir: PathBuf,
+    #[allow(unused)]
     pub data_dir: PathBuf,
+    #[allow(unused)]
     pub log_dir: PathBuf,
     pub config_file: PathBuf,
     pub db_file: PathBuf,

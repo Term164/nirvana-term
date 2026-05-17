@@ -2,14 +2,13 @@ use std::{fs, path::Path};
 
 use serde::{Deserialize, Serialize};
 
-use crate::api::domain::ActiveConnection;
 use crate::api::errors::ConfigError;
 use crate::paths::AppPaths;
 
 #[derive(Debug, Default, Deserialize, Serialize)]
 pub(crate) struct AppConfig {
     #[serde(default)]
-    pub active_connection: Option<ActiveConnection>,
+    pub active_connection: Option<i64>,
 }
 
 impl AppConfig {
