@@ -11,8 +11,6 @@ use crate::storage::Database;
 
 use errors::{ConfigError, DbError};
 
-pub use domain::Connection;
-
 pub struct NirvanaApi {
     paths: AppPaths,
     config: AppConfig,
@@ -23,7 +21,7 @@ pub struct NirvanaApi {
 pub enum NirvanaError {
     #[error("config error: {0}")]
     Config(#[from] ConfigError),
-    #[error("database error: {0}")]
+    #[error(transparent)]
     Db(#[from] DbError),
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),

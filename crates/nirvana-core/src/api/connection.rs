@@ -1,6 +1,6 @@
 use crate::api::NirvanaApi;
 use crate::api::NirvanaError;
-use crate::api::domain::Connection;
+use crate::api::domain::{Connection, ConnectionData};
 use crate::storage::connection_repo;
 
 impl NirvanaApi {
@@ -18,4 +18,21 @@ impl NirvanaApi {
         self.config.save(&self.paths)?;
         Ok(())
     }
+
+    pub fn add_connection(
+        &self,
+        mut connection: ConnectionData,
+    ) -> Result<Connection, NirvanaError> {
+        connection.host = normalize_host(&connection.host);
+        let record = connection_repo::add(&self.db, connection)?;
+        Ok(record.into())
+    }
+}
+
+fn normalize_host(url: &str) -> String {
+    let s = url.trim();
+    let s = s.strip_prefix("https://").unwrap_or(s);
+    let s = s.strip_prefix("http://").unwrap_or(s);
+    let s = s.strip_suffix('/').unwrap_or(s);
+    s.to_string()
 }

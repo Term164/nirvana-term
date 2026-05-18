@@ -1,7 +1,10 @@
+use crate::cli::{AddArgs, ConnectionKind, SecretStore};
 use chrono::{Local, TimeZone};
+use clap::ValueEnum;
 use console::{Style, Term};
-use dialoguer::{Select, theme::ColorfulTheme};
-use nirvana_core::api::{Connection, NirvanaApi};
+use dialoguer::{Input, Password, Select, theme::ColorfulTheme};
+use nirvana_core::api::NirvanaApi;
+use nirvana_core::api::domain::{Connection, ConnectionData};
 use std::cmp::max;
 
 enum Column {
@@ -82,7 +85,7 @@ pub(crate) fn list() -> anyhow::Result<()> {
                 active.to_string(),
                 c.name.clone(),
                 c.kind.clone(),
-                c.base_url.clone(),
+                c.host.clone(),
                 c.identity.clone(),
                 updated,
             ]
@@ -174,10 +177,10 @@ pub(crate) fn activate(query: Option<&str>) -> anyhow::Result<()> {
 }
 
 fn resolve_query(query: &str, connections: &[Connection]) -> anyhow::Result<usize> {
-    if let Ok(id) = query.parse::<i64>() {
-        if let Some(idx) = connections.iter().position(|c| c.id == id) {
-            return Ok(idx);
-        }
+    if let Ok(id) = query.parse::<i64>()
+        && let Some(idx) = connections.iter().position(|c| c.id == id)
+    {
+        return Ok(idx);
     }
     if let Some(idx) = connections.iter().position(|c| c.name == query) {
         return Ok(idx);
@@ -217,4 +220,144 @@ fn pick_interactive(connections: &[Connection]) -> anyhow::Result<usize> {
         Some(i) => Ok(i),
         None => std::process::exit(0),
     }
+}
+
+pub(crate) fn add(args: AddArgs) -> anyhow::Result<()> {
+    let data = if args.name.is_none() {
+        add_interactive()?
+    } else {
+        add_command(args)?
+    };
+
+    let mut api = NirvanaApi::new()?;
+    let connection = api.add_connection(data)?;
+
+    let term = Term::stdout();
+    term.write_line(&format!(
+        "Added connection '{}' (id {})",
+        connection.name, connection.id
+    ))?;
+
+    let use_it = dialoguer::Confirm::new()
+        .with_prompt("Use this connection?")
+        .default(true)
+        .interact()?;
+
+    if use_it {
+        api.set_active_connection(connection.id)?;
+        term.write_line(&format!(
+            "Active connection set to '{}' (id {})",
+            connection.name, connection.id
+        ))?;
+    }
+
+    Ok(())
+}
+
+fn add_command(args: AddArgs) -> anyhow::Result<ConnectionData> {
+    Ok(ConnectionData {
+        name: args.name.unwrap(),
+        kind: args.kind.unwrap().to_string(),
+        host: args.host.unwrap(),
+        identity: args.identity.unwrap(),
+        secret_store: args.storage.unwrap().to_string(),
+        token: args.token.unwrap(),
+    })
+}
+
+fn add_interactive() -> anyhow::Result<ConnectionData> {
+    let theme = ColorfulTheme {
+        active_item_prefix: Style::new().green().apply_to(String::from("❯")),
+        ..ColorfulTheme::default()
+    };
+
+    let name: String = Input::with_theme(&theme)
+        .with_prompt("Connection name")
+        .interact_text()?;
+
+    let kinds = ConnectionKind::value_variants()
+        .iter()
+        .map(|k| match k {
+            ConnectionKind::JiraCloud => "Jira Cloud",
+            ConnectionKind::JiraDc => "Jira DC",
+        })
+        .collect::<Vec<_>>();
+
+    let kind_idx = Select::with_theme(&theme)
+        .with_prompt("Connection type")
+        .items(&kinds)
+        .default(0)
+        .interact_opt()?;
+
+    let kind = match kind_idx {
+        Some(i) => ConnectionKind::value_variants()[i].clone(),
+        None => std::process::exit(0),
+    };
+
+    let host: String = Input::with_theme(&theme)
+        .with_prompt("Host")
+        .interact_text()?;
+
+    let identity_label = match &kind {
+        ConnectionKind::JiraCloud => "Email",
+        ConnectionKind::JiraDc => "Username",
+    };
+
+    let identity: String = Input::with_theme(&theme)
+        .with_prompt(identity_label)
+        .interact_text()?;
+
+    let dim = Style::new().dim();
+    let storage_items = SecretStore::value_variants();
+    let storage_labels: Vec<String> = storage_items
+        .iter()
+        .map(|s| match s {
+            #[cfg(any(target_os = "macos", target_os = "windows"))]
+            SecretStore::Keyring => format!("Keyring {}", dim.apply_to("(recommended)")),
+            SecretStore::Plaintext => format!("Plaintext {}", dim.apply_to("(stored in database)")),
+        })
+        .collect();
+
+    let storage_default = storage_items
+        .iter()
+        .position(|s| {
+            #[cfg(any(target_os = "macos", target_os = "windows"))]
+            {
+                matches!(s, SecretStore::Keyring)
+            }
+            #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+            {
+                matches!(s, SecretStore::Plaintext)
+            }
+        })
+        .unwrap_or(0);
+
+    let storage_idx = Select::with_theme(&theme)
+        .with_prompt("Secret storage")
+        .items(&storage_labels)
+        .default(storage_default)
+        .interact_opt()?;
+
+    let storage = match storage_idx {
+        Some(i) => storage_items[i].clone(),
+        None => std::process::exit(0),
+    };
+
+    let token_label = match &kind {
+        ConnectionKind::JiraCloud => "API token",
+        ConnectionKind::JiraDc => "Personal access token",
+    };
+
+    let token = Password::with_theme(&theme)
+        .with_prompt(token_label)
+        .interact()?;
+
+    Ok(ConnectionData {
+        name,
+        kind: kind.to_string(),
+        host,
+        identity,
+        secret_store: storage.to_string(),
+        token,
+    })
 }

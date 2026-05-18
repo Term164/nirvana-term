@@ -16,4 +16,6 @@ pub enum DbError {
     Sqlite(#[from] rusqlite::Error),
     #[error("db I/O error: {0}")]
     Io(#[from] std::io::Error),
+    #[error("duplicate connection name: '{0}'")]
+    DuplicateName(String),
 }

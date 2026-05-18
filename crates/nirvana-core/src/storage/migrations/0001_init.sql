@@ -2,7 +2,7 @@ create table connections (
     id INTEGER primary key,
     name TEXT not null,
     kind TEXT not null,
-    base_url TEXT not null,
+    host TEXT not null,
     identity TEXT not null,
     secret_store TEXT not null default 'keyring',
     created_at INTEGER not null,

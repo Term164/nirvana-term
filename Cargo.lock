@@ -960,6 +960,7 @@ dependencies = [
 name = "nirvana-core"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "directories",
  "rusqlite",
  "serde",
