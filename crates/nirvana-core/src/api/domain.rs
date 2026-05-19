@@ -1,5 +1,6 @@
 use crate::storage::connection_repo::ConnectionRecord;
 use crate::storage::slot_repo::SlotWithTicket;
+use crate::storage::ticket_repo::TicketRecord;
 
 #[derive(Debug)]
 pub struct Connection {
@@ -59,6 +60,27 @@ impl From<SlotWithTicket> for Slot {
             started_at: r.started_at,
             stopped_at: r.stopped_at,
             published_at: r.published_at,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct Ticket {
+    pub id: i64,
+    pub ticket_key: String,
+    pub summary: Option<String>,
+    pub connection_id: i64,
+    pub last_worked_at: i64,
+}
+
+impl From<TicketRecord> for Ticket {
+    fn from(r: TicketRecord) -> Self {
+        Self {
+            id: r.id,
+            ticket_key: r.ticket_key,
+            summary: r.summary,
+            connection_id: r.connection_id,
+            last_worked_at: r.last_worked_at,
         }
     }
 }

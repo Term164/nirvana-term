@@ -1,5 +1,5 @@
 use crate::api::NirvanaApi;
-use crate::api::domain::{Connection, Slot};
+use crate::api::domain::{Connection, Slot, Ticket};
 use crate::api::errors::{IntegrationError, TrackingError};
 use crate::credentials;
 use crate::integration;
@@ -76,5 +76,14 @@ impl NirvanaApi {
             .ok_or(super::NirvanaError::Tracking(
                 TrackingError::NoActiveConnection,
             ))
+    }
+
+    pub fn list_recent_tickets(&self) -> Result<Vec<Ticket>, super::NirvanaError> {
+        let connection_id = self
+            .config
+            .active_connection
+            .ok_or(TrackingError::NoActiveConnection)?;
+        let records = ticket_repo::list_by_connection(&self.db, connection_id)?;
+        Ok(records.into_iter().map(Ticket::from).collect())
     }
 }

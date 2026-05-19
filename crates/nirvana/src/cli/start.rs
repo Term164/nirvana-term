@@ -1,5 +1,6 @@
-use chrono::TimeZone;
+use chrono::{Local, TimeZone};
 use console::style;
+use dialoguer::{FuzzySelect, Input, theme::ColorfulTheme};
 use nirvana_core::api::NirvanaApi;
 
 use crate::cli::StartArgs;
@@ -9,7 +10,7 @@ pub(crate) fn run(args: StartArgs) -> anyhow::Result<()> {
 
     let (ticket, at, note) = match args.ticket {
         Some(ticket) => (ticket, args.at, args.note),
-        None => interactive_prompt()?,
+        None => interactive_prompt(&api)?,
     };
 
     let at_ts = at.as_deref().map(parse_time).transpose()?;
@@ -29,11 +30,58 @@ pub(crate) fn run(args: StartArgs) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn interactive_prompt() -> anyhow::Result<(String, Option<String>, Option<String>)> {
-    let ticket: String = dialoguer::Input::new()
-        .with_prompt("Ticket key")
+fn interactive_prompt(
+    api: &NirvanaApi,
+) -> anyhow::Result<(String, Option<String>, Option<String>)> {
+    let theme = ColorfulTheme {
+        active_item_prefix: console::Style::new().green().apply_to(String::from("❯")),
+        ..ColorfulTheme::default()
+    };
+
+    let tickets = api.list_recent_tickets()?;
+
+    let ticket = if tickets.is_empty() {
+        Input::with_theme(&theme)
+            .with_prompt("Ticket key")
+            .interact_text()?
+    } else {
+        let items: Vec<String> = tickets
+            .iter()
+            .map(|t| match &t.summary {
+                Some(s) => format!("{}  {}", t.ticket_key, s),
+                None => t.ticket_key.clone(),
+            })
+            .collect();
+
+        let idx = FuzzySelect::with_theme(&theme)
+            .with_prompt("Ticket")
+            .items(&items)
+            .default(0)
+            .max_length(5)
+            .interact_opt()?;
+
+        match idx {
+            None => std::process::exit(0),
+            Some(i) => tickets[i].ticket_key.clone(),
+        }
+    };
+
+    let now_str = Local::now().format("%H:%M").to_string();
+    let at: String = Input::with_theme(&theme)
+        .with_prompt("Start time")
+        .default(now_str)
+        .allow_empty(true)
         .interact_text()?;
-    Ok((ticket, None, None))
+    let at = if at.is_empty() { None } else { Some(at) };
+
+    let note: String = Input::with_theme(&theme)
+        .with_prompt("Note")
+        .default(String::new())
+        .allow_empty(true)
+        .interact_text()?;
+    let note = if note.is_empty() { None } else { Some(note) };
+
+    Ok((ticket, at, note))
 }
 
 fn format_timestamp(ts: i64) -> String {
