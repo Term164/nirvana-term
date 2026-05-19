@@ -1,6 +1,5 @@
 use crate::api::domain::ConnectionData;
-use crate::api::errors::DbError;
-use crate::storage::Database;
+use crate::storage::{Database, DbError};
 
 pub(crate) struct ConnectionRecord {
     pub id: i64,

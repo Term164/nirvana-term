@@ -10,8 +10,8 @@ fn main() {
 
     if let Err(e) = result {
         eprintln!(
-            "{}: {e:#}",
-            console::Style::new().bold().red().apply_to("error")
+            "{} {e:#}",
+            console::Style::new().bold().red().apply_to("error:")
         );
         std::process::exit(1);
     }

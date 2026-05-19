@@ -54,7 +54,7 @@ const COLUMNS: &[Column] = &[
     Column::Static("ACTIVE", "ACTIVE".len()),
     Column::Limited("NAME", 15),
     Column::Unlimited("KIND"),
-    Column::Limited("HOST", 25),
+    Column::Limited("HOST", 30),
     Column::Limited("IDENTITY", 25),
     Column::Static("UPDATED", "2026-05-17".len()),
 ];

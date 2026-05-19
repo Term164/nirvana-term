@@ -1,5 +1,7 @@
 mod connection;
 mod info;
+mod start;
+mod stop;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use std::fmt;
 use std::fmt::Display;
@@ -19,11 +21,34 @@ struct Cli {
 enum Command {
     /// Show system and app diagnostics
     Info,
+    /// Start tracking time on a ticket
+    Start(StartArgs),
+    /// Stop tracking time on active ticket
+    Stop(StopArgs),
     /// Manage connections
     Connection {
         #[command(subcommand)]
         command: Connection,
     },
+}
+
+#[derive(Args, Debug)]
+struct StartArgs {
+    /// Ticket key (e.g. DES-1234). Omit for interactive mode.
+    ticket: Option<String>,
+    /// Start time (e.g. "14:30" or "2026-05-19 14:30"). Requires ticket.
+    #[arg(long, requires = "ticket")]
+    at: Option<String>,
+    /// Note attached to this slot. Requires ticket.
+    #[arg(long, requires = "ticket")]
+    note: Option<String>,
+}
+
+#[derive(Args, Debug)]
+struct StopArgs {
+    /// Stop time (e.g. "14:30" or "2026-05-19 14:30")
+    #[arg(long)]
+    at: Option<String>,
 }
 
 #[derive(Subcommand)]
@@ -94,6 +119,8 @@ pub(crate) fn run() -> anyhow::Result<()> {
 
     match cli.command {
         Some(Command::Info) => info::run(),
+        Some(Command::Start(args)) => start::run(args),
+        Some(Command::Stop(args)) => stop::run(args),
         Some(Command::Connection { command }) => match command {
             Connection::Add(args) => connection::add(args),
             Connection::List => connection::list(),

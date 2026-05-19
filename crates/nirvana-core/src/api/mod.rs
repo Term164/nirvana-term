@@ -2,6 +2,7 @@ mod connection;
 pub mod domain;
 pub mod errors;
 mod info;
+mod tracking;
 
 use std::path::PathBuf;
 
@@ -9,22 +10,12 @@ use crate::config::AppConfig;
 use crate::paths::AppPaths;
 use crate::storage::Database;
 
-use errors::{ConfigError, DbError};
+use errors::NirvanaError;
 
 pub struct NirvanaApi {
     paths: AppPaths,
     config: AppConfig,
     db: Database,
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum NirvanaError {
-    #[error("config error: {0}")]
-    Config(#[from] ConfigError),
-    #[error(transparent)]
-    Db(#[from] DbError),
-    #[error("I/O error: {0}")]
-    Io(#[from] std::io::Error),
 }
 
 pub struct AppInfo {
