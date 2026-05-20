@@ -1,5 +1,10 @@
 use crate::storage::{Database, DbError};
 
+pub enum SlotSort {
+    StartedAt,
+    TicketId,
+}
+
 #[allow(dead_code)]
 pub(crate) struct SlotRecord {
     pub id: i64,
@@ -137,4 +142,56 @@ pub(crate) fn insert(
             },
         )
         .map_err(DbError::from)
+}
+
+pub(crate) fn get_slots(
+    db: &Database,
+    connection_id: i64,
+    from: i64,
+    to: Option<i64>,
+    sort: SlotSort,
+) -> Result<Vec<SlotWithTicket>, DbError> {
+    let order_by = match sort {
+        SlotSort::StartedAt => "s.started_at",
+        SlotSort::TicketId => "s.ticket_id",
+    };
+
+    let sql = if to.is_some() {
+        format!(
+            "select s.id, t.ticket_key, t.summary, s.connection_id, s.note, s.started_at, s.stopped_at, s.published_at
+             from slots s
+             join tickets t on t.id = s.ticket_id
+             where s.connection_id = ?1 and s.started_at >= ?2 and s.started_at < ?3
+             order by {order_by}"
+        )
+    } else {
+        format!(
+            "select s.id, t.ticket_key, t.summary, s.connection_id, s.note, s.started_at, s.stopped_at, s.published_at
+             from slots s
+             join tickets t on t.id = s.ticket_id
+             where s.connection_id = ?1 and s.started_at >= ?2
+             order by {order_by}"
+        )
+    };
+
+    let mut stmt = db.conn().prepare(&sql)?;
+    let rows = match to {
+        Some(to) => stmt.query_map((connection_id, from, to), map_slot_with_ticket)?,
+        None => stmt.query_map((connection_id, from), map_slot_with_ticket)?,
+    };
+
+    rows.collect::<Result<Vec<_>, _>>().map_err(DbError::from)
+}
+
+fn map_slot_with_ticket(row: &rusqlite::Row<'_>) -> rusqlite::Result<SlotWithTicket> {
+    Ok(SlotWithTicket {
+        id: row.get(0)?,
+        ticket_key: row.get(1)?,
+        summary: row.get(2)?,
+        connection_id: row.get(3)?,
+        note: row.get(4)?,
+        started_at: row.get(5)?,
+        stopped_at: row.get(6)?,
+        published_at: row.get(7)?,
+    })
 }

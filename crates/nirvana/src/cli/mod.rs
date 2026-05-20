@@ -1,5 +1,6 @@
 mod connection;
 mod info;
+mod list;
 mod start;
 mod stop;
 use clap::{Args, Parser, Subcommand, ValueEnum};
@@ -25,6 +26,8 @@ enum Command {
     Start(StartArgs),
     /// Stop tracking time on active ticket
     Stop(StopArgs),
+    /// List slots
+    List(ListArgs),
     /// Manage connections
     Connection {
         #[command(subcommand)]
@@ -49,6 +52,19 @@ struct StopArgs {
     /// Stop time (e.g. "14:30" or "2026-05-19 14:30")
     #[arg(long)]
     at: Option<String>,
+}
+
+#[derive(Args, Debug)]
+struct ListArgs {
+    /// Order by ticket instead of time
+    #[arg(long)]
+    by_ticket: bool,
+    /// Range start (e.g. "14:30" or "2026-05-19 14:30"). Defaults to today 00:00.
+    #[arg(long)]
+    start: Option<String>,
+    /// Range stop (e.g. "14:30" or "2026-05-19 14:30"). Unbounded if omitted.
+    #[arg(long)]
+    stop: Option<String>,
 }
 
 #[derive(Subcommand)]
@@ -121,6 +137,7 @@ pub(crate) fn run() -> anyhow::Result<()> {
         Some(Command::Info) => info::run(),
         Some(Command::Start(args)) => start::run(args),
         Some(Command::Stop(args)) => stop::run(args),
+        Some(Command::List(args)) => list::run(args),
         Some(Command::Connection { command }) => match command {
             Connection::Add(args) => connection::add(args),
             Connection::List => connection::list(),

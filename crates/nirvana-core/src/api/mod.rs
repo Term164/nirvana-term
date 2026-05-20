@@ -2,6 +2,7 @@ mod connection;
 pub mod domain;
 pub mod errors;
 mod info;
+mod slots;
 mod tracking;
 
 use std::path::PathBuf;
@@ -11,6 +12,8 @@ use crate::paths::AppPaths;
 use crate::storage::Database;
 
 use errors::NirvanaError;
+
+pub use crate::storage::slot_repo::SlotSort;
 
 pub struct NirvanaApi {
     paths: AppPaths,
