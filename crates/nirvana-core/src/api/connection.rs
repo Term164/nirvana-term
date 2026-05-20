@@ -1,6 +1,9 @@
 use crate::api::NirvanaApi;
 use crate::api::NirvanaError;
 use crate::api::domain::{Connection, ConnectionData};
+use crate::api::errors::TrackingError;
+use crate::credentials;
+use crate::integration;
 use crate::storage::connection_repo;
 
 impl NirvanaApi {
@@ -26,6 +29,19 @@ impl NirvanaApi {
         connection.host = normalize_host(&connection.host);
         let record = connection_repo::add(&self.db, connection)?;
         Ok(record.into())
+    }
+
+    pub fn test_connection(&self) -> Result<(), NirvanaError> {
+        let connection_id = self
+            .config
+            .active_connection
+            .ok_or(TrackingError::NoActiveConnection)?;
+
+        let connection = self.get_connection(connection_id)?;
+        let token = credentials::get_token(&self.db, connection_id)?;
+        let integ = integration::build_integration(&connection, &token)?;
+        integ.test_connection()?;
+        Ok(())
     }
 }
 

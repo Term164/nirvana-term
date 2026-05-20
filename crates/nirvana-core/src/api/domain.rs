@@ -84,3 +84,16 @@ impl From<TicketRecord> for Ticket {
         }
     }
 }
+
+#[derive(Debug)]
+pub struct PublishResult {
+    pub published_count: usize,
+    pub failed: Vec<PublishFailure>,
+    pub timestamp: i64,
+}
+
+#[derive(Debug)]
+pub struct PublishFailure {
+    pub ticket_key: String,
+    pub error: String,
+}

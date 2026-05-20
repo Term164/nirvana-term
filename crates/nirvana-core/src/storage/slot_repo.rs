@@ -183,6 +183,49 @@ pub(crate) fn get_slots(
     rows.collect::<Result<Vec<_>, _>>().map_err(DbError::from)
 }
 
+pub(crate) fn get_unpublished(
+    db: &Database,
+    connection_id: i64,
+    from: i64,
+    to: Option<i64>,
+) -> Result<Vec<SlotWithTicket>, DbError> {
+    let sql = if to.is_some() {
+        "select s.id, t.ticket_key, t.summary, s.connection_id, s.note, s.started_at, s.stopped_at, s.published_at
+         from slots s
+         join tickets t on t.id = s.ticket_id
+         where s.connection_id = ?1 and s.started_at >= ?2 and s.started_at < ?3
+           and s.stopped_at is not null and s.published_at is null
+         order by s.started_at"
+    } else {
+        "select s.id, t.ticket_key, t.summary, s.connection_id, s.note, s.started_at, s.stopped_at, s.published_at
+         from slots s
+         join tickets t on t.id = s.ticket_id
+         where s.connection_id = ?1 and s.started_at >= ?2
+           and s.stopped_at is not null and s.published_at is null
+         order by s.started_at"
+    };
+
+    let mut stmt = db.conn().prepare(sql)?;
+    let rows = match to {
+        Some(to) => stmt.query_map((connection_id, from, to), map_slot_with_ticket)?,
+        None => stmt.query_map((connection_id, from), map_slot_with_ticket)?,
+    };
+
+    rows.collect::<Result<Vec<_>, _>>().map_err(DbError::from)
+}
+
+pub(crate) fn mark_published(
+    db: &Database,
+    ids: &[i64],
+    published_at: i64,
+) -> Result<(), DbError> {
+    for id in ids {
+        db.conn()
+            .execute("update slots set published_at = ?1 where id = ?2", (published_at, id))?;
+    }
+    Ok(())
+}
+
 fn map_slot_with_ticket(row: &rusqlite::Row<'_>) -> rusqlite::Result<SlotWithTicket> {
     Ok(SlotWithTicket {
         id: row.get(0)?,

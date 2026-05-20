@@ -19,6 +19,26 @@ impl JiraIntegration {
 }
 
 impl JiraIntegration {
+    pub(crate) fn test_connection(&self) -> Result<(), IntegrationError> {
+        let url = format!("https://{}/rest/api/3/myself", self.host);
+        let response = self
+            .client
+            .get(&url)
+            .basic_auth(&self.identity, Some(&self.token))
+            .send()?;
+
+        let status = response.status();
+        if status == reqwest::StatusCode::UNAUTHORIZED || status == reqwest::StatusCode::FORBIDDEN {
+            return Err(IntegrationError::Auth(status.to_string()));
+        }
+        if !status.is_success() {
+            return Err(IntegrationError::Network(
+                response.error_for_status_ref().unwrap_err(),
+            ));
+        }
+        Ok(())
+    }
+
     pub(crate) fn fetch_issue(&self, ticket_key: &str) -> Result<IssueInfo, IntegrationError> {
         let url = format!(
             "https://{}/rest/api/3/issue/{}?fields=summary",
@@ -48,5 +68,47 @@ impl JiraIntegration {
         let summary = body["fields"]["summary"].as_str().unwrap_or("").to_string();
 
         Ok(IssueInfo { summary })
+    }
+
+    pub(crate) fn publish_slot(
+        &self,
+        ticket_key: &str,
+        started_at: i64,
+        seconds: i64,
+    ) -> Result<(), IntegrationError> {
+        let url = format!(
+            "https://{}/rest/api/3/issue/{}/worklog",
+            self.host, ticket_key
+        );
+
+        let started = chrono::DateTime::from_timestamp(started_at, 0)
+            .unwrap()
+            .format("%Y-%m-%dT%H:%M:%S.000%z");
+
+        let body = serde_json::json!({
+            "timeSpentSeconds": seconds,
+            "started": started.to_string(),
+        });
+
+        let response = self
+            .client
+            .post(&url)
+            .basic_auth(&self.identity, Some(&self.token))
+            .json(&body)
+            .send()?;
+
+        let status = response.status();
+        if status == reqwest::StatusCode::NOT_FOUND {
+            return Err(IntegrationError::TicketNotFound(ticket_key.to_string()));
+        }
+        if status == reqwest::StatusCode::UNAUTHORIZED || status == reqwest::StatusCode::FORBIDDEN {
+            return Err(IntegrationError::Auth(status.to_string()));
+        }
+        if !status.is_success() {
+            return Err(IntegrationError::Network(
+                response.error_for_status_ref().unwrap_err(),
+            ));
+        }
+        Ok(())
     }
 }

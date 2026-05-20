@@ -2,6 +2,7 @@ mod connection;
 pub mod domain;
 pub mod errors;
 mod info;
+mod publish;
 mod slots;
 mod tracking;
 

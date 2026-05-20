@@ -29,9 +29,26 @@ pub(crate) struct Integration {
 }
 
 impl Integration {
+    pub fn test_connection(&self) -> Result<(), IntegrationError> {
+        match &self.kind {
+            IntegrationKind::Jira(j) => j.test_connection(),
+        }
+    }
+
     pub fn fetch_issue(&self, ticket_key: &str) -> Result<IssueInfo, IntegrationError> {
         match &self.kind {
             IntegrationKind::Jira(j) => j.fetch_issue(ticket_key),
+        }
+    }
+
+    pub fn publish_slot(
+        &self,
+        ticket_key: &str,
+        started_at: i64,
+        seconds: i64,
+    ) -> Result<(), IntegrationError> {
+        match &self.kind {
+            IntegrationKind::Jira(j) => j.publish_slot(ticket_key, started_at, seconds),
         }
     }
 }

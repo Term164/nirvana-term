@@ -361,3 +361,14 @@ fn add_interactive() -> anyhow::Result<ConnectionData> {
         token,
     })
 }
+
+pub(crate) fn test() -> anyhow::Result<()> {
+    let api = NirvanaApi::new()?;
+    let term = Term::stdout();
+
+    match api.test_connection() {
+        Ok(()) => term.write_line("Connection OK")?,
+        Err(e) => return Err(e.into()),
+    }
+    Ok(())
+}

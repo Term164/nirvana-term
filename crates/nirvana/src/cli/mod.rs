@@ -1,8 +1,12 @@
 mod connection;
 mod info;
 mod list;
+mod publish;
 mod start;
 mod stop;
+mod time;
+
+pub(crate) use time::parse_time;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use std::fmt;
 use std::fmt::Display;
@@ -28,6 +32,8 @@ enum Command {
     Stop(StopArgs),
     /// List slots
     List(ListArgs),
+    /// Publish slots to backend
+    Publish(PublishArgs),
     /// Manage connections
     Connection {
         #[command(subcommand)]
@@ -67,6 +73,16 @@ struct ListArgs {
     stop: Option<String>,
 }
 
+#[derive(Args, Debug)]
+struct PublishArgs {
+    /// Range start (e.g. "14:30" or "2026-05-19 14:30"). Defaults to today 00:00.
+    #[arg(long)]
+    start: Option<String>,
+    /// Range stop (e.g. "14:30" or "2026-05-19 14:30"). Unbounded if omitted.
+    #[arg(long)]
+    stop: Option<String>,
+}
+
 #[derive(Subcommand)]
 enum Connection {
     /// Add a new connection
@@ -78,6 +94,8 @@ enum Connection {
         /// Connection ID or name (omit for interactive selection)
         query: Option<String>,
     },
+    /// Test active connection
+    Test,
 }
 
 #[derive(Args, Debug)]
@@ -138,10 +156,12 @@ pub(crate) fn run() -> anyhow::Result<()> {
         Some(Command::Start(args)) => start::run(args),
         Some(Command::Stop(args)) => stop::run(args),
         Some(Command::List(args)) => list::run(args),
+        Some(Command::Publish(args)) => publish::run(args),
         Some(Command::Connection { command }) => match command {
             Connection::Add(args) => connection::add(args),
             Connection::List => connection::list(),
             Connection::Use { query } => connection::activate(query.as_deref()),
+            Connection::Test => connection::test(),
         },
         None => Ok(()),
     }

@@ -67,7 +67,7 @@ impl NirvanaApi {
         }
     }
 
-    fn get_connection(&self, id: i64) -> Result<Connection, super::NirvanaError> {
+    pub(crate) fn get_connection(&self, id: i64) -> Result<Connection, super::NirvanaError> {
         let records = connection_repo::list(&self.db)?;
         records
             .into_iter()
