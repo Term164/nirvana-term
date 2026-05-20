@@ -276,6 +276,13 @@ pub(crate) struct SlotUpdate {
     pub stopped_at: Change<i64>,
 }
 
+pub(crate) fn delete(db: &Database, slot_id: i64) -> Result<bool, DbError> {
+    let affected = db
+        .conn()
+        .execute("delete from slots where id = ?1", [slot_id])?;
+    Ok(affected > 0)
+}
+
 pub(crate) fn update(db: &Database, slot_id: i64, changes: &SlotUpdate) -> Result<(), DbError> {
     use rusqlite::types::Value;
 

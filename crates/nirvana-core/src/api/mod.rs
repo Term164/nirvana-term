@@ -1,4 +1,5 @@
 mod connection;
+mod delete;
 mod edit;
 pub mod domain;
 pub mod errors;

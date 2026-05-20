@@ -1,4 +1,5 @@
 mod connection;
+mod delete;
 mod edit;
 mod info;
 mod list;
@@ -34,6 +35,8 @@ enum Command {
     Stop(StopArgs),
     /// Edit an existing slot
     Edit(EditArgs),
+    /// Delete a slot
+    Delete(DeleteArgs),
     /// List slots
     List(ListArgs),
     /// Publish slots to backend
@@ -77,6 +80,12 @@ struct EditArgs {
     /// Set or clear the stop time (use empty string to clear, reopening the slot)
     #[arg(long)]
     stop: Option<String>,
+}
+
+#[derive(Args, Debug)]
+struct DeleteArgs {
+    /// Slot ID to delete
+    slot_id: i64,
 }
 
 #[derive(Args, Debug)]
@@ -193,6 +202,9 @@ pub(crate) fn run() -> anyhow::Result<()> {
                 stopped_at,
             })
         }
+        Some(Command::Delete(args)) => delete::run(delete::DeleteArgs {
+            slot_id: args.slot_id,
+        }),
         Some(Command::List(args)) => list::run(args),
         Some(Command::Publish(args)) => publish::run(args),
         Some(Command::Connection { command }) => match command {

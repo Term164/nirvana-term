@@ -27,6 +27,8 @@ pub enum TrackingError {
     SlotNotFound(i64),
     #[error("cannot edit a published slot")]
     SlotAlreadyPublished,
+    #[error("cannot delete a published slot")]
+    CannotDeletePublished,
     #[error("stopped_at must be null or after started_at")]
     InvalidTimeRange,
 }
