@@ -78,6 +78,7 @@ let ticker: number | undefined;
 
 onMounted(() => {
     getAppInfo();
+    connections.initialize();
     ticker = window.setInterval(() => tasks.tick(), 1000);
     window.addEventListener("keydown", handleKeydown);
 });
@@ -89,7 +90,19 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <ConnectionSetup v-if="!connections.activeConnection" />
+    <main
+        v-if="!connections.initialized"
+        class="grid h-screen place-items-center bg-(--bg) text-(--faint)"
+    >
+        <div class="flex items-center gap-2 text-[11px]">
+            <span
+                class="h-1.5 w-1.5 animate-[dot-pulse_2s_var(--ease)_infinite] rounded-full bg-(--accent)"
+            ></span>
+            <span>Loading connection</span>
+        </div>
+    </main>
+
+    <ConnectionSetup v-else-if="!connections.activeConnection" />
 
     <main v-else class="h-screen overflow-hidden bg-(--bg) text-(--text)">
         <section
@@ -121,7 +134,9 @@ onUnmounted(() => {
                     <div
                         class="h-1.25 w-1.25 shrink-0 rounded-full bg-(--success) shadow-[0_0_5px_rgba(131,210,158,0.4)]"
                     ></div>
-                    <span class="text-(--muted)">work</span>
+                    <span class="text-(--muted)">{{
+                        connections.activeConnection.name
+                    }}</span>
                     <span class="text-(--very-faint)">·</span>
                     <span class="text-(--faint)">{{
                         connections.activeConnection.hostname

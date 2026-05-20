@@ -2661,6 +2661,7 @@ dependencies = [
 name = "nirvana-gui"
 version = "0.1.0"
 dependencies = [
+ "nirvana-core",
  "serde",
  "serde_json",
  "tauri",

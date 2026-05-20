@@ -21,6 +21,15 @@ export type ConnectionType = "jira-cloud" | "jira-dc";
 export type ConnectionSetupStep = "details" | "credentials";
 
 export type GuiConnection = {
+  id: number;
+  name: string;
+  type: ConnectionType;
+  hostname: string;
+  username: string;
+};
+
+export type CreateConnectionInput = {
+  name: string;
   type: ConnectionType;
   hostname: string;
   username: string;

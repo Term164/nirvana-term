@@ -18,6 +18,7 @@ const connectionTypes = computed(() =>
 );
 
 const detailsError = computed(() => {
+  if (!connections.draftName.trim()) return "Connection name is required.";
   if (connections.normalizedDraftHostname) return "";
   return "Hostname is required.";
 });
@@ -37,8 +38,8 @@ const goToCredentials = async () => {
   }
 };
 
-const saveConnection = () => {
-  connections.saveConnection();
+const saveConnection = async () => {
+  await connections.saveConnection();
 };
 
 onMounted(() => {
@@ -114,6 +115,16 @@ onMounted(() => {
         </fieldset>
 
         <label class="flex min-w-0 flex-col gap-1.5">
+          <span class="text-[10px] font-bold uppercase tracking-[0.04em] text-(--faint)">Name</span>
+          <input
+            v-model="connections.draftName"
+            class="min-h-[34px] w-full rounded-md border border-(--border) bg-[rgba(0,0,0,0.24)] px-2.5 py-[7px] text-xs text-(--text) outline-none transition-[border-color,box-shadow] duration-150 ease-[var(--ease)] placeholder:text-(--very-faint) focus:border-[rgba(149,222,200,0.7)] focus:shadow-[0_0_0_2px_rgba(149,222,200,0.1)]"
+            placeholder="work"
+            autocomplete="organization-title"
+          />
+        </label>
+
+        <label class="flex min-w-0 flex-col gap-1.5">
           <span class="text-[10px] font-bold uppercase tracking-[0.04em] text-(--faint)">Hostname</span>
           <input
             ref="hostnameField"
@@ -125,14 +136,14 @@ onMounted(() => {
         </label>
 
         <p class="m-0 min-h-4 text-[11px] text-[#ff9a86]">
-          {{ detailsError }}
+          {{ connections.error || detailsError }}
         </p>
 
         <footer class="flex items-center justify-end gap-2 pt-1">
           <button
             class="min-h-[30px] rounded-md border border-(--accent) bg-(--accent) px-3 py-1.5 text-[11px] font-bold text-(--bg) transition-[color,background,border-color] duration-150 ease-[var(--ease)] disabled:cursor-default disabled:opacity-[0.42]"
             type="submit"
-            :disabled="!connections.isDetailsValid"
+            :disabled="!connections.isDetailsValid || connections.loading"
           >
             Next
           </button>
@@ -145,6 +156,8 @@ onMounted(() => {
         @submit.prevent="saveConnection"
       >
         <div class="px-0.5 text-[11px] text-(--faint)">
+          <span class="font-semibold text-(--text)">{{ connections.draftName }}</span>
+          <span class="text-(--very-faint)"> · </span>
           <span class="font-semibold text-(--accent)">{{ connections.connectionTypeLabel }}</span>
           <span class="text-(--very-faint)"> · </span>
           <span>{{ connections.normalizedDraftHostname }}</span>
@@ -173,13 +186,14 @@ onMounted(() => {
         </label>
 
         <p class="m-0 min-h-4 text-[11px] text-[#ff9a86]">
-          {{ credentialsError }}
+          {{ connections.error || credentialsError }}
         </p>
 
         <footer class="flex items-center justify-end gap-2 pt-1">
           <button
             class="mr-auto min-h-[30px] rounded-md border border-(--border) bg-(--surface) px-3 py-1.5 text-[11px] text-(--muted) transition-[color,background,border-color] duration-150 ease-[var(--ease)] hover:bg-(--surface-strong) hover:text-(--text)"
             type="button"
+            :disabled="connections.loading"
             @click="connections.previousSetupStep()"
           >
             Back
@@ -187,9 +201,9 @@ onMounted(() => {
           <button
             class="min-h-[30px] rounded-md border border-(--accent) bg-(--accent) px-3 py-1.5 text-[11px] font-bold text-(--bg) transition-[color,background,border-color] duration-150 ease-[var(--ease)] disabled:cursor-default disabled:opacity-[0.42]"
             type="submit"
-            :disabled="!connections.isCredentialsValid"
+            :disabled="!connections.isCredentialsValid || connections.loading"
           >
-            Connect
+            {{ connections.loading ? "Checking..." : "Connect" }}
           </button>
         </footer>
       </form>
