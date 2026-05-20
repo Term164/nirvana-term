@@ -31,7 +31,7 @@ const actions = computed(() => [
         key: "e",
         label: "Edit",
         fn: () => tasks.openEditModal(),
-        disabled: true,
+        disabled: tasks.loading || tasks.selectedSessionEntry === null,
     },
     {
         key: "p",

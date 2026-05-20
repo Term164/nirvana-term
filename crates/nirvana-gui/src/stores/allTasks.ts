@@ -315,7 +315,12 @@ export const useAllTasksStore = defineStore("allTasks", {
       this.activeModal = "start";
     },
     openEditModal() {
-      this.error = "Editing database slots is not supported yet.";
+      if (!this.selectedSessionEntry) {
+        return;
+      }
+
+      this.error = "";
+      this.activeModal = "edit";
     },
     openPublishModal() {
       if (this.publishableSessions.length === 0) {
@@ -411,14 +416,76 @@ export const useAllTasksStore = defineStore("allTasks", {
     switchToSelectedTask() {
       return this.switchToPreviousTask();
     },
-    updateSession(input: EditSessionInput) {
-      void input;
-      this.error = "Editing database slots is not supported yet.";
-      return false;
+    async updateSession(input: EditSessionInput) {
+      const currentEntry = this.selectedSessionEntry;
+      if (!currentEntry || currentEntry.session.id !== input.sessionId) {
+        this.error = "Select a slot before editing it.";
+        return false;
+      }
+
+      if (normalizeTicketKey(input.ticketKey) !== currentEntry.task.key) {
+        this.error = "Changing a slot's ticket is not supported yet.";
+        return false;
+      }
+
+      this.loading = true;
+      this.error = "";
+
+      try {
+        const slot = await invoke<BackendSlot>("edit_slot", {
+          input: {
+            slotId: input.sessionId,
+            note: normalizedNote(input.note) ?? "",
+            startedAt: Math.floor(input.start.getTime() / 1000),
+            stoppedAt: input.end
+              ? Math.floor(input.end.getTime() / 1000)
+              : null,
+          },
+        });
+        await this.loadSelectedDate();
+        this.selectSession(slot.id);
+        this.expandedTaskIds = Array.from(
+          new Set([
+            ...this.expandedTaskIds,
+            this.selectedSessionEntry?.task.id,
+          ].filter((id): id is number => typeof id === "number")),
+        );
+        return true;
+      } catch (error) {
+        this.error = error instanceof Error ? error.message : String(error);
+        return false;
+      } finally {
+        this.loading = false;
+      }
     },
-    deleteSelectedSession() {
-      this.error = "Deleting database slots is not supported yet.";
-      return false;
+    async deleteSelectedSession() {
+      const currentEntry = this.selectedSessionEntry;
+      if (!currentEntry) {
+        this.error = "Select a slot before deleting it.";
+        return false;
+      }
+
+      this.loading = true;
+      this.error = "";
+
+      try {
+        await invoke<BackendSlot>("delete_slot", {
+          input: { slotId: currentEntry.session.id },
+        });
+        await this.loadSelectedDate();
+        this.selectedSessionId = null;
+        this.selectedTaskId =
+          this.tasks.find((task) => task.id === currentEntry.task.id)?.id ??
+          this.timelineSessions[0]?.task.id ??
+          this.tasks[0]?.id ??
+          null;
+        return true;
+      } catch (error) {
+        this.error = error instanceof Error ? error.message : String(error);
+        return false;
+      } finally {
+        this.loading = false;
+      }
     },
     async confirmPublishUnpublished() {
       const { from, to } = dateRangeSeconds(this.selectedDate);

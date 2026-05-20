@@ -1,5 +1,5 @@
 use nirvana_core::api::domain::{
-    Connection, ConnectionData, PublishFailure, PublishResult, Slot, Ticket,
+    Change, Connection, ConnectionData, PublishFailure, PublishResult, Slot, SlotEdit, Ticket,
 };
 use nirvana_core::api::{NirvanaApi, SlotSort};
 use serde::{Deserialize, Serialize};
@@ -57,6 +57,21 @@ struct StartSlotInput {
     ticket_key: String,
     note: Option<String>,
     started_at: Option<i64>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct EditSlotInput {
+    slot_id: i64,
+    note: String,
+    started_at: i64,
+    stopped_at: Option<i64>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct DeleteSlotInput {
+    slot_id: i64,
 }
 
 #[derive(Deserialize)]
@@ -220,6 +235,33 @@ fn start_slot(input: StartSlotInput) -> Result<GuiSlot, String> {
 }
 
 #[tauri::command]
+fn edit_slot(input: EditSlotInput) -> Result<GuiSlot, String> {
+    let api = NirvanaApi::new().map_err(|error| error.to_string())?;
+    let note = input.note.trim();
+    let edit = SlotEdit {
+        note: if note.is_empty() {
+            Change::Clear
+        } else {
+            Change::Set(note.to_string())
+        },
+        started_at: Some(input.started_at),
+        stopped_at: input.stopped_at.map_or(Change::Clear, Change::Set),
+    };
+
+    api.edit_slot(input.slot_id, edit)
+        .map(GuiSlot::from)
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn delete_slot(input: DeleteSlotInput) -> Result<GuiSlot, String> {
+    let api = NirvanaApi::new().map_err(|error| error.to_string())?;
+    api.delete_slot(input.slot_id)
+        .map(GuiSlot::from)
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 fn stop_slot() -> Result<Option<GuiSlot>, String> {
     let api = NirvanaApi::new().map_err(|error| error.to_string())?;
     api.stop_slot(None)
@@ -246,6 +288,8 @@ pub fn run() {
             list_slots,
             list_recent_tickets,
             start_slot,
+            edit_slot,
+            delete_slot,
             stop_slot,
             publish_slots
         ])

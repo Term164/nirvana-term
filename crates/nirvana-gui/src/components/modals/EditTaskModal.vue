@@ -13,8 +13,12 @@ const {
   duration,
   error,
   firstField,
+  handleStartKeydown,
+  handleStopKeydown,
   knownTask,
   note,
+  normalizeStartTime,
+  normalizeStopTime,
   readOnly,
   reset,
   start,
@@ -69,8 +73,9 @@ onMounted(async () => {
         <label class="flex min-w-0 flex-col gap-1.5">
           <span class="text-[10px] font-bold uppercase tracking-[0.04em] text-(--faint)">Ticket</span>
           <input
-            ref="firstField"
             v-model="ticketKey"
+            readonly
+            title="Ticket changes are not supported yet."
             class="min-h-[34px] w-full rounded-md border border-(--border) bg-[rgba(0,0,0,0.24)] px-2.5 py-[7px] text-xs text-(--text) tabular-nums outline-none transition-[border-color,box-shadow] duration-150 ease-[var(--ease)] placeholder:text-(--very-faint) read-only:cursor-default read-only:text-(--muted) focus:border-[rgba(149,222,200,0.7)] focus:shadow-[0_0_0_2px_rgba(149,222,200,0.1)]"
             autocomplete="off"
           />
@@ -82,20 +87,33 @@ onMounted(async () => {
         </label>
 
         <label class="flex min-w-0 flex-col gap-1.5">
-          <span class="text-[10px] font-bold uppercase tracking-[0.04em] text-(--faint)">Start</span>
+          <span class="text-[10px] font-bold uppercase tracking-[0.04em] text-(--faint)">Start time</span>
           <input
+            ref="firstField"
             v-model="start"
             class="min-h-[34px] w-full rounded-md border border-(--border) bg-[rgba(0,0,0,0.24)] px-2.5 py-[7px] text-xs text-(--text) tabular-nums outline-none transition-[border-color,box-shadow] duration-150 ease-[var(--ease)] placeholder:text-(--very-faint) read-only:cursor-default read-only:text-(--muted) focus:border-[rgba(149,222,200,0.7)] focus:shadow-[0_0_0_2px_rgba(149,222,200,0.1)]"
-            type="datetime-local"
+            type="text"
+            inputmode="numeric"
+            pattern="[0-9]{1,2}:[0-9]{2}"
+            placeholder="14:30"
+            autocomplete="off"
+            @blur="normalizeStartTime"
+            @keydown="handleStartKeydown"
           />
         </label>
 
         <label class="flex min-w-0 flex-col gap-1.5">
-          <span class="text-[10px] font-bold uppercase tracking-[0.04em] text-(--faint)">Stop</span>
+          <span class="text-[10px] font-bold uppercase tracking-[0.04em] text-(--faint)">Stop time</span>
           <input
             v-model="stop"
             class="min-h-[34px] w-full rounded-md border border-(--border) bg-[rgba(0,0,0,0.24)] px-2.5 py-[7px] text-xs text-(--text) tabular-nums outline-none transition-[border-color,box-shadow] duration-150 ease-[var(--ease)] placeholder:text-(--very-faint) read-only:cursor-default read-only:text-(--muted) focus:border-[rgba(149,222,200,0.7)] focus:shadow-[0_0_0_2px_rgba(149,222,200,0.1)]"
-            type="datetime-local"
+            type="text"
+            inputmode="numeric"
+            pattern="[0-9]{1,2}:[0-9]{2}"
+            placeholder="Leave empty for running"
+            autocomplete="off"
+            @blur="normalizeStopTime"
+            @keydown="handleStopKeydown"
           />
         </label>
       </div>
@@ -113,7 +131,7 @@ onMounted(async () => {
       <p
         class="mt-0.5 mb-0 min-h-[18px] rounded-md border border-(--border) bg-(--surface) px-2.5 py-2 text-[11px] text-(--muted)"
       >
-        {{ knownTask ? `Saving to ${knownTask.key}` : "Unknown keys create a local ticket and move this slot there." }}
+        {{ knownTask ? `Saving ${knownTask.key}` : "Ticket changes are not supported yet." }}
       </p>
       <p class="m-0 min-h-4 text-[11px] text-[#ff9a86]">{{ error || computedError }}</p>
     </div>
@@ -125,6 +143,7 @@ onMounted(async () => {
         <button
           class="mr-auto min-h-[30px] rounded-md border border-[rgba(255,154,134,0.22)] bg-[rgba(255,154,134,0.06)] px-3 py-1.5 text-[11px] text-[#ff9a86] transition-[color,background,border-color] duration-150 ease-[var(--ease)] disabled:cursor-default disabled:opacity-[0.42] max-[760px]:mr-0"
           type="button"
+          :disabled="tasks.loading"
           @click="deleteSession"
         >
           Delete
@@ -136,13 +155,14 @@ onMounted(async () => {
         <button
           class="min-h-[30px] rounded-md border border-(--border) bg-(--surface) px-3 py-1.5 text-[11px] text-(--muted) transition-[color,background,border-color] duration-150 ease-[var(--ease)] hover:bg-(--surface-strong) hover:text-(--text)"
           type="button"
+          :disabled="tasks.loading"
           @click="tasks.closeModal()"
         >Cancel</button>
         <button
           class="min-h-[30px] rounded-md border border-(--accent) bg-(--accent) px-3 py-1.5 text-[11px] font-bold text-(--bg) transition-[color,background,border-color] duration-150 ease-[var(--ease)] disabled:cursor-default disabled:opacity-[0.42]"
           type="submit"
-          :disabled="Boolean(computedError)"
-        >Save</button>
+          :disabled="Boolean(computedError) || tasks.loading"
+        >{{ tasks.loading ? "Saving..." : "Save" }}</button>
       </footer>
     </template>
   </ModalShell>
