@@ -53,6 +53,7 @@ const COLUMNS: &[Column] = &[
     Column::Static("STARTED", "HH:MM".len()),
     Column::Static("STOPPED", "running…".len()),
     Column::Static("DURATION", "1h 23m".len()),
+    Column::Limited("URL", 50),
 ];
 
 pub(crate) fn run(args: ListArgs) -> anyhow::Result<()> {
@@ -103,6 +104,7 @@ pub(crate) fn run(args: ListArgs) -> anyhow::Result<()> {
                 started,
                 stopped,
                 duration,
+                s.issue_url.clone().unwrap_or_default(),
             ]
         })
         .collect();

@@ -51,16 +51,21 @@ impl NirvanaApi {
         }
 
         let result = slot_repo::insert(&self.db, ticket.id, connection_id, note, now)?;
-        Ok(Slot::from(result))
+        let integ = integration::Integration::build_for_url(&connection)?;
+        let issue_url = Some(integ.get_issue_link(&result.ticket_key));
+        Ok(Slot::from_record(result, issue_url))
     }
 
     pub fn stop_slot(&self, at: Option<i64>) -> Result<Option<Slot>, super::NirvanaError> {
         let now = at.unwrap_or_else(|| chrono::Utc::now().timestamp());
         match slot_repo::stop_running(&self.db, now) {
             Ok(slot) => {
-                let mut s = slot;
+                let connection = self.get_connection(slot.connection_id)?;
+                let integ = integration::Integration::build_for_url(&connection)?;
+                let issue_url = Some(integ.get_issue_link(&slot.ticket_key));
+                let mut s = Slot::from_record(slot, issue_url);
                 s.stopped_at = Some(now);
-                Ok(Some(Slot::from(s)))
+                Ok(Some(s))
             }
             Err(DbError::Sqlite(rusqlite::Error::QueryReturnedNoRows)) => Ok(None),
             Err(e) => Err(super::NirvanaError::Db(e)),

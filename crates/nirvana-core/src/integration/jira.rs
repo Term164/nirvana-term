@@ -16,9 +16,22 @@ impl JiraIntegration {
             client: reqwest::blocking::Client::new(),
         }
     }
+
+    pub(crate) fn new_unauthenticated(host: &str) -> Self {
+        Self {
+            host: host.to_string(),
+            identity: String::new(),
+            token: String::new(),
+            client: reqwest::blocking::Client::new(),
+        }
+    }
 }
 
 impl JiraIntegration {
+    pub(crate) fn get_issue_link(&self, ticket_key: &str) -> String {
+        format!("https://{}/browse/{}", self.host, ticket_key)
+    }
+
     pub(crate) fn test_connection(&self) -> Result<(), IntegrationError> {
         let url = format!("https://{}/rest/api/3/myself", self.host);
         let response = self

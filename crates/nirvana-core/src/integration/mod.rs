@@ -29,6 +29,22 @@ pub(crate) struct Integration {
 }
 
 impl Integration {
+    pub fn build_for_url(connection: &Connection) -> Result<Integration, IntegrationError> {
+        let kind = match connection.kind.as_str() {
+            "jira-cloud" | "jira-dc" => {
+                IntegrationKind::Jira(JiraIntegration::new_unauthenticated(&connection.host))
+            }
+            _ => return Err(IntegrationError::UnsupportedKind(connection.kind.clone())),
+        };
+        Ok(Integration { kind })
+    }
+
+    pub fn get_issue_link(&self, ticket_key: &str) -> String {
+        match &self.kind {
+            IntegrationKind::Jira(j) => j.get_issue_link(ticket_key),
+        }
+    }
+
     pub fn test_connection(&self) -> Result<(), IntegrationError> {
         match &self.kind {
             IntegrationKind::Jira(j) => j.test_connection(),
